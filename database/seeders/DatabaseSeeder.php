@@ -21,7 +21,8 @@ class DatabaseSeeder extends Seeder
             RoleHasPermissionsTableSeeder::class,
             ModelHasPermissionsTableSeeder::class,
             AppSettingTableSeeder::class,
-            CancellationReasonsTableSeeder::class
+            CancellationReasonsTableSeeder::class,
+            AdminSeeder::class
         ]);
     }
 }

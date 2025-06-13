@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
-yum -y install libzip libzip-devel
-
-# Will enable zip extension in /etc/php.ini
-pecl upgrade zip 
+if ! php -m | grep -q 'zip'; then
+    yum -y install libzip libzip-devel
+    pecl upgrade zip
+else
+    echo "La extensión zip ya está instalada."
+fi

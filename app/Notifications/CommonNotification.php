@@ -38,18 +38,18 @@ class CommonNotification extends Notification
      */
     public function via($notifiable)
     {
-        $notifications = []; 
+        $notifications = [];
 
-        if( $notifiable->user_type == 'driver' && env('ONESIGNAL_DRIVER_APP_ID') && env('ONESIGNAL_DRIVER_REST_API_KEY')) 
+        if( $notifiable->user_type == 'driver' && env('ONESIGNAL_DRIVER_APP_ID') && env('ONESIGNAL_DRIVER_REST_API_KEY'))
         {
                 $heading = [
                     'en' => $this->subject,
                 ];
-        
+
                 $content = [
                     'en' => strip_tags($this->notification_message),
                 ];
-                
+
                 $parameters = [
                     'api_key' => env('ONESIGNAL_DRIVER_REST_API_KEY'),
                     'app_id' => env('ONESIGNAL_DRIVER_APP_ID'),
@@ -91,34 +91,52 @@ class CommonNotification extends Notification
         // Log::info('onesignal notifiable'.json_encode($this->data));
         return OneSignalMessage::create()
             ->setSubject($this->subject)
-            ->setBody($msg) 
+            ->setBody($msg)
             ->setData('id',$this->data['id'])
             ->setData('type',$type);
     }
 
     public function toFcm($notifiable)
     {
-        $message = new FcmMessage();
         $msg = strip_tags($this->notification_message);
         if (!isset($msg) && $msg == ''){
             $msg = __('message.default_notification_body');
         }
-        $notification = [
-            'body' => $msg,
-            'title' => $this->subject,
-        ];
-        $data = [
-            'click_action' => "FLUTTER_NOTIFICATION_CLICK",
-            'sound' => 'default',
-            'status' => 'done',
-            'id' => $this->data['id'],
-            'type' => $this->data['type'],
-            'message' => $notification,
-        ];
-        // Log::info('fcm notifiable'.json_encode($notifiable));
-        $message->content($notification)->data($data)->priority(FcmMessage::PRIORITY_HIGH);
 
-        return $message;
+        return [
+            'message' => [
+                'token' => $notifiable->fcm_token,
+                'notification' => [
+                    'title' => $this->subject,
+                    'body' => $msg
+                ],
+                'data' => [
+                    'click_action' => "FLUTTER_NOTIFICATION_CLICK",
+                    'sound' => 'default',
+                    'status' => 'done',
+                    'id' => $this->data['id'],
+                    'type' => $this->data['type'],
+                    'message' => json_encode([
+                        'title' => $this->subject,
+                        'body' => $msg
+                    ])
+                ],
+                'android' => [
+                    'priority' => 'high',
+                    'notification' => [
+                        'sound' => 'default',
+                        'click_action' => 'FLUTTER_NOTIFICATION_CLICK'
+                    ]
+                ],
+                'apns' => [
+                    'payload' => [
+                        'aps' => [
+                            'sound' => 'default'
+                        ]
+                    ]
+                ]
+            ]
+        ];
     }
 
     /**

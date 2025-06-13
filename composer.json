@@ -8,6 +8,7 @@
         "php": "^7.3|^8.0",
         "benwilkins/laravel-fcm-notification": "^4.0",
         "fruitcake/laravel-cors": "^2.0",
+        "google/auth": "^1.44",
         "grimzy/laravel-mysql-spatial": "^5.0",
         "guzzlehttp/guzzle": "^7.0.1",
         "laravel-notification-channels/onesignal": "^2.3",

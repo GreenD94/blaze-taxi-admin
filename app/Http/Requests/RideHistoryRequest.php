@@ -21,8 +21,8 @@ class RideHistoryRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'start_date' => 'nullable|date|before_or_equal:end_date',
-            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'from_date' => 'nullable|date|before_or_equal:to_date',
+            'to_date' => 'nullable|date|after_or_equal:from_date',
             'payment_type' => 'nullable|string|in:' . implode(',', array_merge(['all'], PaymentType::values())),
             'per_page' => 'nullable|integer|min:1|max:100',
             'page' => 'nullable|integer|min:1',
@@ -35,10 +35,10 @@ class RideHistoryRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'start_date.date' => 'La fecha inicial debe ser una fecha válida.',
-            'start_date.before_or_equal' => 'La fecha inicial debe ser anterior o igual a la fecha final.',
-            'end_date.date' => 'La fecha final debe ser una fecha válida.',
-            'end_date.after_or_equal' => 'La fecha final debe ser posterior o igual a la fecha inicial.',
+            'from_date.date' => 'La fecha inicial debe ser una fecha válida.',
+            'from_date.before_or_equal' => 'La fecha inicial debe ser anterior o igual a la fecha final.',
+            'to_date.date' => 'La fecha final debe ser una fecha válida.',
+            'to_date.after_or_equal' => 'La fecha final debe ser posterior o igual a la fecha inicial.',
             'payment_type.in' => 'El método de pago seleccionado no es válido.',
             'per_page.integer' => 'El número de registros por página debe ser un número entero.',
             'per_page.min' => 'El número de registros por página debe ser al menos 1.',

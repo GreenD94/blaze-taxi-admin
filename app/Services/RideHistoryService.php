@@ -95,7 +95,9 @@ class RideHistoryService
 
         $query = $query->orderByDesc('id');
 
-        Log::info('Query built successfully');
+        // Log the final SQL query for debugging
+        Log::info('Final SQL Query: ' . $query->toSql());
+        Log::info('Query bindings: ' . json_encode($query->getBindings()));
 
         return $query;
     }

@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use App\Services\RideHistoryService;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -13,7 +14,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        //
+        // Registrar el RideHistoryService
+        $this->app->singleton(RideHistoryService::class, function ($app) {
+            return new RideHistoryService();
+        });
     }
 
     /**

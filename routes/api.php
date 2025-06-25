@@ -113,9 +113,9 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
 
 
 });
-
 Route::get('place-autocomplete-api', [ API\RideRequestController::class, 'placeAutoComplete' ] );
 Route::get('place-detail-api', [ API\RideRequestController::class, 'placeDetail' ] );
 
 
 Route::get('bonus/get', [ BonusController::class, 'getBonuses' ] );
+

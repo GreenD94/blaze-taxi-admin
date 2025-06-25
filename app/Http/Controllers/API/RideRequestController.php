@@ -89,7 +89,7 @@ class RideRequestController extends Controller
 
         if( $riderequest == null )
         {
-            return json_message_response(         __('message.not_found_entry',['name' => __('message.riderequest') ]) );
+            return json_message_response(__('message.not_found_entry',['name' => __('message.riderequest') ]) );
         }
         $ride_detail = new RideRequestResource($riderequest);
 
@@ -169,7 +169,7 @@ class RideRequestController extends Controller
             'status' => 'completed',
             'distance' => $distance,
             'duration' => $duration,
-            'service_d        ata' => $service,
+            'service_data' => $service,
         ]);
 
         $history_data = [
@@ -198,7 +198,7 @@ class RideRequestController extends Controller
                         // if rider completed 1 ride request then update rider earning
             if ($completedRideRequests==1) {
 
-                $referar_user = User::where('ref_code', '=', $ride_request    ->rider->applied_ref_code)->first();
+                $referar_user = User::where('ref_code', '=', $ride_request->rider->applied_ref_code)->first();
 
                 if ($referar_user) {
 
@@ -299,7 +299,7 @@ class RideRequestController extends Controller
                     $discount_amount = $coupon->discount;
                 }
 
-                if ($coupon->maximum_discount >                 0 && $discount_amount > $coupon->maximum_discount) {
+                if ($coupon->maximum_discount > 0 && $discount_amount > $coupon->maximum_discount) {
                     $discount_amount = $coupon->maximum_discount;
                 }
                 $subtotal = $total_amount - $discount_amount;
@@ -340,9 +340,9 @@ class RideRequestController extends Controller
 
     public function rideRating(Request $request)
     {
-        $ride_request = RideRequest::where('id',request('ride_re        quest_id'))->first();
+        $ride_request = RideRequest::where('id',request('ride_request_id'))->first();
 
-        $message = __('message.not_found_entry', ['name' => __('message.ride        request')]);
+        $message = __('message.not_found_entry', ['name' => __('message.ride_request')]);
 
         if($ride_request == '') {
             return json_message_response( $message );
@@ -361,7 +361,7 @@ class RideRequestController extends Controller
         }
         if(auth()->user()->hasRole('driver')) {
             $ride_request->update(['is_driver_rated' => true]);
-            $msg = __('message.rated_        successfully', ['form' => __('message.driver')]);
+            $msg = __('message.rated_successfully', ['form' => __('message.driver')]);
         }
         if($ride_request->payment->payment_status == 'pending' && $request->has('tips') && request('tips') != null) {
             $ride_request->update(['tips' => request('tips')]);
@@ -396,7 +396,7 @@ class RideRequestController extends Controller
         if ( $validator->fails() ) {
             $data = [
                 'status' => 'false',
-                'messag        e' => $validator->errors()->first(),
+                'message' => $validator->errors()->first(),
                 'all_message' =>  $validator->errors()
             ];
 
@@ -414,8 +414,8 @@ class RideRequestController extends Controller
 
     public function placeDetail(Request $request)
     {
-        $validator         = Validator::make($request->all(), [
-            'place        id' => 'required',
+        $validator = Validator::make($request->all(), [
+            'place_id' => 'required',
         ]);
 
         if ( $validator->fails() ) {
@@ -439,7 +439,7 @@ class RideRequestController extends Controller
 
         $this->validate($request, [
             'id' => 'required',
-            'driver_id' => '        required',
+            'driver_id' => 'required',
         ]);
 
         $id = $request->id;

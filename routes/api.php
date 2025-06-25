@@ -75,7 +75,7 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
 
     Route::post('save-ride-rating', [ API\RideRequestController::class, 'rideRating'] );
 
-    Route::post('save-payment', [ API\PaymentController::class, 'paymentSave    '] );
+    Route::post('save-payment', [ API\PaymentController::class, 'paymentSave'] );
 
     Route::get('withdrawrequest-list', [ API\WithdrawRequestController::class, 'getList'] );
     Route::post('save-withdrawrequest', [ App\Http\Controllers\WithdrawRequestController::class, 'store'] );

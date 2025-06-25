@@ -105,6 +105,10 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
 
     Route::get('banners', [ API\BannerController::class, 'index'] );
 
+    Route::get('driver/{id}/ride-history', [ App\Http\Controllers\DriverController::class, 'getRideHistory' ]);
+
+    Route::get('driver/{id}/ride-history/export', [ App\Http\Controllers\DriverController::class, 'exportRideHistoryCSV' ]);
+
     Route::post('logout',[ API\UserController::class, 'logout']);
 
 

@@ -112,23 +112,7 @@ class DriverController extends Controller
 
         $profileImage = getSingleMedia($data, 'profile_image');
 
-       // Obtener viajes completados del conductor
-       $completedRides = RideRequest::where('driver_id', $data->id)
-       ->where('status', 'completed')
-       ->with(['rider', 'payment', 'driver.userWallet'])
-       ->orderByDesc('id')
-       ->get();
-
-       // Cargar el saldo histórico de billetera para cada viaje
-       foreach($completedRides as $ride) {
-           // Calcular el saldo histórico hasta el momento del viaje
-           $historicalBalance = $this->calculateHistoricalWalletBalance($data->id, $ride->datetime);
-
-           // Asignar el saldo histórico al viaje
-           $ride->historical_wallet_balance = $historicalBalance;
-       }
-
-        return view('driver.show', compact('data', 'profileImage', 'pageTitle', 'completedRides'));
+        return view('driver.show', compact('data', 'profileImage', 'pageTitle'));
     }
 
     /**
@@ -260,5 +244,206 @@ class DriverController extends Controller
 
         // Si no hay transacciones anteriores, el saldo era 0
         return 0;
+    }
+
+    /**
+     * Obtener historial de viajes del conductor
+     *
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getRideHistory($id)
+    {
+        \Log::info('getRideHistory called with driver ID: ' . $id);
+
+        $data = User::findOrFail($id);
+        \Log::info('Driver found: ' . $data->display_name);
+
+        // Obtener parámetros de filtro
+        $fromDate = request('from_date');
+        $toDate = request('to_date');
+        $paymentType = request('payment_type');
+        $perPage = request('per_page', 10);
+
+        // Construir la consulta base
+        $query = RideRequest::where('driver_id', $data->id)
+            ->where('status', 'completed')
+            ->with(['rider', 'payment', 'driver.userWallet']);
+
+        // Aplicar filtros
+        if ($fromDate) {
+            $query->whereDate('datetime', '>=', $fromDate);
+        }
+
+        if ($toDate) {
+            $query->whereDate('datetime', '<=', $toDate);
+        }
+
+        if ($paymentType && $paymentType !== 'all') {
+            $query->where('payment_type', $paymentType);
+        }
+
+        // Obtener datos con paginación
+        $completedRides = $query->orderByDesc('id')->paginate($perPage);
+
+        // Cargar el saldo histórico de billetera para cada viaje
+        foreach($completedRides as $ride) {
+            // Calcular el saldo histórico hasta el momento del viaje
+            $historicalBalance = $this->calculateHistoricalWalletBalance($data->id, $ride->datetime);
+
+            // Asignar el saldo histórico al viaje
+            $ride->historical_wallet_balance = $historicalBalance;
+        }
+
+        $response = [
+            'status' => true,
+            'data' => $completedRides->items(),
+            'pagination' => [
+                'current_page' => $completedRides->currentPage(),
+                'last_page' => $completedRides->lastPage(),
+                'per_page' => $completedRides->perPage(),
+                'total' => $completedRides->total(),
+                'from' => $completedRides->firstItem(),
+                'to' => $completedRides->lastItem(),
+            ],
+            'filters' => [
+                'from_date' => $fromDate,
+                'to_date' => $toDate,
+                'payment_type' => $paymentType,
+            ]
+        ];
+
+        \Log::info('Response data structure:', [
+            'status' => $response['status'],
+            'count' => count($response['data']),
+            'total' => $response['pagination']['total'],
+            'current_page' => $response['pagination']['current_page']
+        ]);
+
+        return response()->json($response);
+    }
+
+    /**
+     * Exportar historial de viajes del conductor a CSV
+     *
+     * @param int $id
+     * @return \Symfony\Component\HttpFoundation\StreamedResponse
+     */
+    public function exportRideHistoryCSV($id)
+    {
+        \Log::info('exportRideHistoryCSV called with driver ID: ' . $id);
+
+        $data = User::findOrFail($id);
+
+        // Obtener parámetros de filtro
+        $fromDate = request('from_date');
+        $toDate = request('to_date');
+        $paymentType = request('payment_type');
+
+        // Construir la consulta base (sin paginación para exportar todo)
+        $query = RideRequest::where('driver_id', $data->id)
+            ->where('status', 'completed')
+            ->with(['rider', 'payment', 'driver.userWallet']);
+
+        // Aplicar filtros
+        if ($fromDate) {
+            $query->whereDate('datetime', '>=', $fromDate);
+        }
+
+        if ($toDate) {
+            $query->whereDate('datetime', '<=', $toDate);
+        }
+
+        if ($paymentType && $paymentType !== 'all') {
+            $query->where('payment_type', $paymentType);
+        }
+
+        // Obtener todos los datos
+        $completedRides = $query->orderByDesc('id')->get();
+
+        // Cargar el saldo histórico de billetera para cada viaje
+        foreach($completedRides as $ride) {
+            $historicalBalance = $this->calculateHistoricalWalletBalance($data->id, $ride->datetime);
+            $ride->historical_wallet_balance = $historicalBalance;
+        }
+
+        $filename = 'historial_viajes_' . $data->display_name . '_' . date('Y-m-d_H-i-s') . '.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ];
+
+        $callback = function() use ($completedRides) {
+            $file = fopen('php://output', 'w');
+
+            // BOM para UTF-8
+            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+
+            // Encabezados del CSV
+            fputcsv($file, [
+                'ID',
+                'Fecha/Hora',
+                'Pasajero',
+                'Teléfono Pasajero',
+                'Monto',
+                'Método de Pago',
+                'Efectivo Recibido',
+                'Efectivo Cobrado',
+                'Vuelto',
+                'Saldo Billetera',
+                'Estado'
+            ]);
+
+            // Datos
+            foreach ($completedRides as $ride) {
+                $rideDate = \Carbon\Carbon::parse($ride->datetime)->format('d/m/Y H:i');
+                $riderName = $ride->rider ? ($ride->rider->first_name ?? '') . ' ' . ($ride->rider->last_name ?? '') : '-';
+                $riderPhone = $ride->rider ? ($ride->rider->contact_number ?? '-') : '-';
+
+                $paymentTypeText = '';
+                switch($ride->payment_type) {
+                    case 'cash':
+                        $paymentTypeText = 'Efectivo';
+                        break;
+                    case 'wallet':
+                        $paymentTypeText = 'Billetera';
+                        break;
+                    case 'mobile':
+                        $paymentTypeText = 'Móvil';
+                        break;
+                    default:
+                        $paymentTypeText = ucfirst($ride->payment_type ?? 'N/A');
+                }
+
+                $collectedCash = $ride->payment && $ride->payment->collected_cash ? number_format($ride->payment->collected_cash, 2) : '-';
+                $totalAmount = $ride->payment && $ride->payment->total_amount ? number_format($ride->payment->total_amount, 2) : '-';
+
+                $change = '-';
+                if ($ride->payment && $ride->payment->collected_cash && $ride->payment->total_amount) {
+                    $change = number_format($ride->payment->collected_cash - $ride->payment->total_amount, 2);
+                }
+
+                $walletBalance = $ride->historical_wallet_balance ? number_format($ride->historical_wallet_balance, 2) : '-';
+
+                fputcsv($file, [
+                    $ride->id,
+                    $rideDate,
+                    trim($riderName),
+                    $riderPhone,
+                    number_format($ride->total_amount, 2),
+                    $paymentTypeText,
+                    $collectedCash,
+                    $totalAmount,
+                    $change,
+                    $walletBalance,
+                    'Completada'
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 }

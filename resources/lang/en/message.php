@@ -288,7 +288,7 @@ return array(
         'payment_status_message' => 'Ride #:id payment status is :status.',
     ),
     'notification_settings' => 'Notification Setting',
-    'notification_list' => 
+    'notification_list' =>
     array(
         'IS_ONESIGNAL' => 'OneSignal',
         'IS_FIREBASE' => 'FireBase',
@@ -395,5 +395,6 @@ return array(
     'bank' => 'Bank',
     'account_banned' => 'Your account is banned. Please contact system administrator.',
     'debit' => 'Debit',
-    
+    'view_ride_history' => 'View Ride History',
+    'loading' => 'Loading'
 );

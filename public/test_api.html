@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test API - Historial de Viajes</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, select { padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: 200px; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .result { margin-top: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background: #f9f9f9; }
+        .loading { color: #007bff; }
+        .error { color: #dc3545; }
+        .success { color: #28a745; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Test API - Historial de Viajes del Conductor</h1>
+
+        <div class="form-group">
+            <label for="driver_id">ID del Conductor:</label>
+            <input type="number" id="driver_id" value="1" placeholder="Ingrese el ID del conductor">
+        </div>
+
+        <div class="form-group">
+            <label for="from_date">Desde:</label>
+            <input type="date" id="from_date">
+        </div>
+
+        <div class="form-group">
+            <label for="to_date">Hasta:</label>
+            <input type="date" id="to_date">
+        </div>
+
+        <div class="form-group">
+            <label for="payment_type">Método de Pago:</label>
+            <select id="payment_type">
+                <option value="">Todos</option>
+                <option value="cash">Efectivo</option>
+                <option value="wallet">Billetera</option>
+                <option value="mobile">Móvil</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="page">Página:</label>
+            <input type="number" id="page" value="1" min="1">
+        </div>
+
+        <div class="form-group">
+            <label for="per_page">Registros por página:</label>
+            <input type="number" id="per_page" value="10" min="1" max="100">
+        </div>
+
+        <button onclick="testAPI()">Probar API</button>
+        <button onclick="testSimpleAPI()" style="background: #28a745;">Probar API Simple</button>
+        <button onclick="testBasicAPI()" style="background: #ffc107; color: #000;">Probar API Básica</button>
+
+        <div id="result" class="result" style="display: none;">
+            <h3>Resultado:</h3>
+            <div id="resultContent"></div>
+        </div>
+    </div>
+
+    <script>
+        function testAPI() {
+            const driverId = document.getElementById('driver_id').value;
+            const fromDate = document.getElementById('from_date').value;
+            const toDate = document.getElementById('to_date').value;
+            const paymentType = document.getElementById('payment_type').value;
+            const page = document.getElementById('page').value;
+            const perPage = document.getElementById('per_page').value;
+
+            if (!driverId) {
+                alert('Por favor ingrese el ID del conductor');
+                return;
+            }
+
+            // Construir parámetros
+            const params = new URLSearchParams({
+                driver_id: driverId,
+                page: page,
+                per_page: perPage
+            });
+
+            if (fromDate) params.append('from_date', fromDate);
+            if (toDate) params.append('to_date', toDate);
+            if (paymentType) params.append('payment_type', paymentType);
+
+            const resultDiv = document.getElementById('result');
+            const resultContent = document.getElementById('resultContent');
+
+            resultDiv.style.display = 'block';
+            resultContent.innerHTML = '<div class="loading">Cargando...</div>';
+
+            // Hacer la petición
+            fetch(`/api/driver-ride-history?${params.toString()}`)
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Response data:', data);
+
+                    if (data.status) {
+                        displayResults(data);
+                    } else {
+                        resultContent.innerHTML = `<div class="error">Error: ${data.message || 'Error desconocido'}</div>`;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    resultContent.innerHTML = `<div class="error">Error de conexión: ${error.message}</div>`;
+                });
+        }
+
+        function testSimpleAPI() {
+            const driverId = document.getElementById('driver_id').value || '1';
+
+            const resultDiv = document.getElementById('result');
+            const resultContent = document.getElementById('resultContent');
+
+            resultDiv.style.display = 'block';
+            resultContent.innerHTML = '<div class="loading">Probando conexión simple...</div>';
+
+            // Hacer la petición simple
+            fetch(`/api/driver-ride-history?driver_id=${driverId}&test=true`)
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Response data:', data);
+
+                    if (data.status) {
+                        resultContent.innerHTML = `
+                            <div class="success">
+                                <h4>¡API funcionando!</h4>
+                                <p>Mensaje: ${data.message}</p>
+                                <p>Driver ID: ${data.driver_id}</p>
+                                <h5>Datos de prueba:</h5>
+                                <pre>${JSON.stringify(data.test_data, null, 2)}</pre>
+                            </div>
+                        `;
+                    } else {
+                        resultContent.innerHTML = `<div class="error">Error: ${data.message || 'Error desconocido'}</div>`;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    resultContent.innerHTML = `
+                        <div class="error">
+                            <h4>Error de conexión:</h4>
+                            <p>${error.message}</p>
+                            <p><strong>Posibles causas:</strong></p>
+                            <ul>
+                                <li>El servidor Laravel no está corriendo</li>
+                                <li>La URL de la API es incorrecta</li>
+                                <li>Hay un problema de CORS</li>
+                                <li>La ruta no está registrada correctamente</li>
+                            </ul>
+                            <p><strong>Verifica que:</strong></p>
+                            <ul>
+                                <li>El servidor esté corriendo en http://localhost:8000</li>
+                                <li>La ruta /api/driver-ride-history esté registrada</li>
+                                <li>No haya errores en los logs de Laravel</li>
+                            </ul>
+                        </div>
+                    `;
+                });
+        }
+
+        function testBasicAPI() {
+            const resultDiv = document.getElementById('result');
+            const resultContent = document.getElementById('resultContent');
+
+            resultDiv.style.display = 'block';
+            resultContent.innerHTML = '<div class="loading">Probando API básica...</div>';
+
+            // Hacer la petición a la API básica
+            fetch('/api/test-api')
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Response data:', data);
+
+                    if (data.status) {
+                        resultContent.innerHTML = `
+                            <div class="success">
+                                <h4>¡API básica funcionando!</h4>
+                                <p>Mensaje: ${data.message}</p>
+                                <p>Timestamp: ${data.timestamp}</p>
+                                <p><strong>El servidor está respondiendo correctamente.</strong></p>
+                            </div>
+                        `;
+                    } else {
+                        resultContent.innerHTML = `<div class="error">Error: ${data.message || 'Error desconocido'}</div>`;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    resultContent.innerHTML = `
+                        <div class="error">
+                            <h4>Error de conexión básica:</h4>
+                            <p>${error.message}</p>
+                            <p><strong>El problema es de conectividad con el servidor.</strong></p>
+                            <p>Verifica que:</p>
+                            <ul>
+                                <li>El servidor Laravel esté corriendo en http://localhost:8000</li>
+                                <li>No haya errores en la consola del navegador</li>
+                                <li>La URL sea correcta</li>
+                            </ul>
+                        </div>
+                    `;
+                });
+        }
+
+        function displayResults(data) {
+            const resultContent = document.getElementById('resultContent');
+
+            let html = `
+                <div class="success">
+                    <h4>Datos de paginación:</h4>
+                    <p>Total de registros: ${data.pagination.total_items}</p>
+                    <p>Página actual: ${data.pagination.currentPage} de ${data.pagination.totalPages}</p>
+                    <p>Registros por página: ${data.pagination.per_page}</p>
+                </div>
+            `;
+
+            if (data.data && data.data.length > 0) {
+                html += `
+                    <h4>Viajes encontrados (${data.data.length}):</h4>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Fecha</th>
+                                <th>Pasajero</th>
+                                <th>Monto</th>
+                                <th>Método</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                data.data.forEach(ride => {
+                    const rideDate = new Date(ride.datetime).toLocaleDateString('es-ES');
+                    const riderName = ride.rider_name || 'N/A';
+                    const totalAmount = ride.total_amount ? `$${parseFloat(ride.total_amount).toFixed(2)}` : 'N/A';
+                    const paymentType = ride.payment_type || 'N/A';
+
+                    html += `
+                        <tr>
+                            <td>${ride.id}</td>
+                            <td>${rideDate}</td>
+                            <td>${riderName}</td>
+                            <td>${totalAmount}</td>
+                            <td>${paymentType}</td>
+                            <td>${ride.status}</td>
+                        </tr>
+                    `;
+                });
+
+                html += '</tbody></table>';
+            } else {
+                html += '<div class="loading">No se encontraron viajes para este conductor.</div>';
+            }
+
+            resultContent.innerHTML = html;
+        }
+
+        // Establecer fechas por defecto (último mes)
+        window.onload = function() {
+            const today = new Date();
+            const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
+
+            document.getElementById('to_date').value = today.toISOString().split('T')[0];
+            document.getElementById('from_date').value = lastMonth.toISOString().split('T')[0];
+        };
+    </script>
+</body>
+</html>

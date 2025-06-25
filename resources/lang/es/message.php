@@ -427,6 +427,8 @@ return array(
     'assign' => 'Asignar',
     'assign_success' => 'Asignación exitosa',
     'already_assign' => 'Solicitud de viaje ya tiene conductor asignado',
-    'mobile-payment' => 'Pago Móvil'
+    'mobile-payment' => 'Pago Móvil',
+    'view_ride_history' => 'Ver historial de viajes',
+    'loading' => 'Cargando'
 
 );

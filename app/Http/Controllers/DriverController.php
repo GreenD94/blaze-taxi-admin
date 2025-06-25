@@ -9,6 +9,9 @@ use App\Models\Role;
 use App\Http\Requests\DriverRequest;
 use App\Models\DriverDocument;
 use App\Models\Payment;
+use Illuminate\Support\Facades\Log;
+use App\Models\RideRequest;
+use App\Models\WalletHistory;
 
 class DriverController extends Controller
 {
@@ -66,7 +69,7 @@ class DriverController extends Controller
         // Save Driver detail...
         $user->userDetail()->create($request->userDetail);
         $user->userBankAccount()->create($request->userBankAccount);
-        
+
         $user->userWallet()->create(['total_amount' => 0 ]);
 /*
         if($user->driverService()->count() > 0)
@@ -99,13 +102,33 @@ class DriverController extends Controller
         $data = User::with('roles','userDetail', 'userBankAccount')->findOrFail($id);
         $data->rating = count($data->driverRating) > 0 ? (float) number_format(max($data->driverRating->avg('rating'),0), 2) : 0;
 
-        $data->cash_earning = Payment::myPayment()->where('payment_status', 'paid')->where('payment_type', 'cash')->sum('total_amount') ?? 0;
-        $data->wallet_earning = Payment::myPayment()->where('payment_status', 'paid')->where('payment_type', 'wallet')->sum('driver_commission') ?? 0;
+        $data->cash_earning = Payment::whereHas('riderequest', function($query) use ($data) {
+            $query->where('driver_id', $data->id);
+        })->where('payment_status', 'paid')->where('payment_type', 'cash')->sum('total_amount') ?? 0;
+        $data->wallet_earning = Payment::whereHas('riderequest', function($query) use ($data) {
+            $query->where('driver_id', $data->id);
+        })->where('payment_status', 'paid')->where('payment_type', 'wallet')->sum('driver_commission') ?? 0;
         $data->total_earning = $data->cash_earning + $data->wallet_earning;
 
         $profileImage = getSingleMedia($data, 'profile_image');
 
-        return view('driver.show', compact('data', 'profileImage', 'pageTitle'));
+       // Obtener viajes completados del conductor
+       $completedRides = RideRequest::where('driver_id', $data->id)
+       ->where('status', 'completed')
+       ->with(['rider', 'payment', 'driver.userWallet'])
+       ->orderByDesc('id')
+       ->get();
+
+       // Cargar el saldo histórico de billetera para cada viaje
+       foreach($completedRides as $ride) {
+           // Calcular el saldo histórico hasta el momento del viaje
+           $historicalBalance = $this->calculateHistoricalWalletBalance($data->id, $ride->datetime);
+
+           // Asignar el saldo histórico al viaje
+           $ride->historical_wallet_balance = $historicalBalance;
+       }
+
+        return view('driver.show', compact('data', 'profileImage', 'pageTitle', 'completedRides'));
     }
 
     /**
@@ -121,7 +144,7 @@ class DriverController extends Controller
 
         $profileImage = getSingleMedia($data, 'profile_image');
         $assets = ['phone'];
-/* 
+/*
         $selected_service = $data->driverService->mapWithKeys(function ($item) {
             return [ $item->service_id => optional($item->service)->name ];
         });
@@ -139,7 +162,7 @@ class DriverController extends Controller
     public function update(DriverRequest $request, $id)
     {
         $user = User::with('userDetail')->findOrFail($id);
-        
+
         $request['password'] = $request->password != '' ? bcrypt($request->password) : $user->password;
 
         $request['display_name'] = $request->first_name.' '. $request->last_name;
@@ -221,5 +244,21 @@ class DriverController extends Controller
         }
 
         return redirect()->back()->with($status,$message);
+    }
+
+    private function calculateHistoricalWalletBalance($userId, $rideDateTime)
+    {
+        // Buscar la transacción más reciente ANTES del viaje (excluyendo las transacciones del viaje actual)
+        $latestTransaction = WalletHistory::where('user_id', $userId)
+            ->where('datetime', '<', $rideDateTime)
+            ->orderByDesc('datetime')
+            ->first();
+
+        if ($latestTransaction) {
+            return $latestTransaction->balance;
+        }
+
+        // Si no hay transacciones anteriores, el saldo era 0
+        return 0;
     }
 }

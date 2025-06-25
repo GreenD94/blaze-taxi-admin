@@ -57,7 +57,7 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
 
     Route::post('riderequest-respond', [ App\Http\Controllers\RideRequestController::class, 'acceptRideRequest' ] );
     Route::post('complete-riderequest', [ API\RideRequestController::class, 'completeRideRequest' ] );
-    
+
     Route::post('cancel-proposal', [ API\RideRequestController::class, 'cancelDriverProposal' ] );
 
     Route::get('wallet-detail', [ API\WalletController::class, 'getWallatDetail'] );
@@ -74,7 +74,7 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::post('admin-sos-notify', [ API\SosController::class, 'adminSosNotify'] );
 
     Route::post('save-ride-rating', [ API\RideRequestController::class, 'rideRating'] );
-    
+
     Route::post('save-payment', [ API\PaymentController::class, 'paymentSave'] );
 
     Route::get('withdrawrequest-list', [ API\WithdrawRequestController::class, 'getList'] );
@@ -90,13 +90,13 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::get('current-riderequest', [ API\DashboardController::class, 'currentRideRequest'] );
 
     Route::post('earning-list', [ API\PaymentController::class, 'DriverEarningList'] );
-    
+
     Route::post('update-profile', [ API\UserController::class, 'updateProfile']);
     Route::post('update-phone-number', [ API\UserController::class, 'updatePhoneNumber']);
     Route::post('change-password',[ API\UserController::class, 'changePassword']);
     Route::post('update-user-status', [ API\UserController::class, 'updateUserStatus']);
     Route::get('pending-ride-request', [ API\RideRequestController::class, 'listRideRequestPendingByDriver'] );
-    
+
     Route::post('delete-user-account', [ API\UserController::class, 'deleteUserAccount']);
 
     Route::get('additional-fees-list', [ API\AdditionalFeesController::class, 'getList'] );
@@ -105,13 +105,17 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
 
     Route::get('banners', [ API\BannerController::class, 'index'] );
 
+    Route::get('driver/{id}/ride-history', [ App\Http\Controllers\DriverController::class, 'getRideHistory' ]);
+
+    Route::get('driver/{id}/ride-history/export', [ App\Http\Controllers\DriverController::class, 'exportRideHistoryCSV' ]);
+
     Route::post('logout',[ API\UserController::class, 'logout']);
 
-    
-});
 
+});
 Route::get('place-autocomplete-api', [ API\RideRequestController::class, 'placeAutoComplete' ] );
 Route::get('place-detail-api', [ API\RideRequestController::class, 'placeDetail' ] );
 
 
 Route::get('bonus/get', [ BonusController::class, 'getBonuses' ] );
+

@@ -78,7 +78,7 @@ class RideRequestController extends Controller
             'pagination' => json_pagination_response($items),
             'data' => $items,
         ];
-        
+
         return json_custom_response($response);
     }
 
@@ -86,10 +86,10 @@ class RideRequestController extends Controller
     {
         $id = $request->id;
         $riderequest = RideRequest::where('id',$id)->first();
-        
+
         if( $riderequest == null )
         {
-            return json_message_response( __('message.not_found_entry',['name' => __('message.riderequest') ]) );
+            return json_message_response(__('message.not_found_entry',['name' => __('message.riderequest') ]) );
         }
         $ride_detail = new RideRequestResource($riderequest);
 
@@ -118,7 +118,7 @@ class RideRequestController extends Controller
             'driver_rating' => $driver_rating,
             'complaint' => isset($complaint) ? new ComplaintResource($complaint) : null,
             'payment' => optional($ride_detail)->payment,
-            // 'region' => optional($ride_detail)->service_data['region'] 
+            // 'region' => optional($ride_detail)->service_data['region']
         ];
 
         return json_custom_response($response);
@@ -154,7 +154,7 @@ class RideRequestController extends Controller
         $service = $ride_request->service;
 
         $start_datetime = $ride_request->rideRequestHistory()->where('history_type', 'in_progress')->pluck('datetime')->first();
-        
+
         $duration = calculateRideDuration($start_datetime);
 
         $arrived_datetime = $ride_request->riderequest_history_data('arrived');
@@ -164,7 +164,7 @@ class RideRequestController extends Controller
         $waiting_time = $waiting_time - ($service->waiting_time_limit ?? 0);
         $waiting_time = $waiting_time < 0 ? 0 : $waiting_time;
 
-        
+
         $ride_request->update([
             'status' => 'completed',
             'distance' => $distance,
@@ -186,16 +186,16 @@ class RideRequestController extends Controller
         $ridefee['waiting_time_limit'] = $service->waiting_time_limit;
         $ridefee['per_minute_drive'] = $service->per_minute_drive;
         $ridefee['per_minute_waiting'] = $service->per_minute_wait;
-        
+
         $ride_request->update($ridefee);
 
         // if referrals enabled, then update referral earnings
         if (SettingData('referrals', 'REFERRALS_ENABLED') == '1') {
-            
+
             //count ride request completed by rider
             $completedRideRequests = RideRequest::where('rider_id', $ride_request->rider_id)->where('status', 'completed')->count();
-    
-            // if rider completed 1 ride request then update rider earning
+
+                        // if rider completed 1 ride request then update rider earning
             if ($completedRideRequests==1) {
 
                 $referar_user = User::where('ref_code', '=', $ride_request->rider->applied_ref_code)->first();
@@ -273,11 +273,11 @@ class RideRequestController extends Controller
         $per_distance_charge = $distance * $service->per_distance;
 
         $per_minute_waiting_charge = $waiting_time * $service->per_minute_wait;
-        
+
         $base_fare = $service->base_fare;
-        $acceptedFee =  $ride_request->modality == 'auction' ? 
+        $acceptedFee =  $ride_request->modality == 'auction' ?
             ($ride_request->offerings->where('driver_id', $ride_request->driver_id)->last()->fee_offered ?? 0) : $ride_request->proposed_fee;
-        // $total_amount = $acceptedFee + $base_fare + $per_distance_charge + $per_minute_drive_charge + $per_minute_waiting_charge + $extra_charges_amount ;
+        // $total_amount =         $acceptedFee + $base_fare + $per_distance_charge + $per_minute_drive_charge + $per_minute_waiting_charge +  $extra_charges_amount ;
         $total_amount = $acceptedFee + $extra_charges_amount ;
 
         if( $service->commission_type == 'fixed' ) {
@@ -292,7 +292,7 @@ class RideRequestController extends Controller
         $discount_amount = 0;
         if ($coupon) {
             if ($coupon->minimum_amount < $total_amount) {
-                
+
                 if( $coupon->discount_type == 'percentage' ) {
                     $discount_amount = $total_amount * ($coupon->discount/100);
                 } else {
@@ -328,11 +328,11 @@ class RideRequestController extends Controller
 
         $coupon = Coupon::where('code', $coupon_code)->first();
         $status = isset($coupon_code) ? 400 : 200;
-        
+
         if($coupon != null) {
             $status = Coupon::isValidCoupon($coupon);
         }
-        
+
         $response = couponVerifyResponse($status);
 
         return json_custom_response($response,$status);
@@ -342,7 +342,7 @@ class RideRequestController extends Controller
     {
         $ride_request = RideRequest::where('id',request('ride_request_id'))->first();
 
-        $message = __('message.not_found_entry', ['name' => __('message.riderequest')]);
+        $message = __('message.not_found_entry', ['name' => __('message.ride_request')]);
 
         if($ride_request == '') {
             return json_message_response( $message );
@@ -354,7 +354,7 @@ class RideRequestController extends Controller
 
         $data['rating_by'] = auth()->user()->user_type;
         RideRequestRating::updateOrCreate([ 'id' => $request->id ], $data);
-        
+
         if(auth()->user()->hasRole('rider')) {
             $ride_request->update(['is_rider_rated' => true]);
             $msg = __('message.rated_successfully', ['form' => __('message.rider')]);
@@ -382,7 +382,7 @@ class RideRequestController extends Controller
         }
 
         $message = __('message.save_form',[ 'form' => __('message.rating') ] );
-        
+
         return json_message_response($message);
     }
 
@@ -402,9 +402,9 @@ class RideRequestController extends Controller
 
             return json_custom_response($data,400);
         }
-        
+
         $google_map_api_key = env('GOOGLE_MAP_KEY');
-        
+
         $response = Http::withHeaders([
             'Accept-Language' => request('language'),
         ])->get('https://maps.googleapis.com/maps/api/place/autocomplete/json?input='.request('search_text').'&key='.$google_map_api_key);
@@ -415,7 +415,7 @@ class RideRequestController extends Controller
     public function placeDetail(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'placeid' => 'required',
+            'place_id' => 'required',
         ]);
 
         if ( $validator->fails() ) {
@@ -427,7 +427,7 @@ class RideRequestController extends Controller
 
             return json_custom_response($data,400);
         }
-        
+
         $google_map_api_key = env('GOOGLE_MAP_KEY');
         $response = Http::get('https://maps.googleapis.com/maps/api/place/details/json?placeid='.$request->placeid.'&key='.$google_map_api_key);
 

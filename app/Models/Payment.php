@@ -31,6 +31,10 @@ class Payment extends Model
         return $this->belongsTo(RideRequest::class, 'ride_request_id', 'id');
     }
 
+    public function driver() {
+        return $this->hasOneThrough(User::class, RideRequest::class, 'id', 'id', 'ride_request_id', 'driver_id');
+    }
+
     public function scopeMyPayment($query)
     {
         $user = auth()->user();
@@ -65,6 +69,6 @@ class Payment extends Model
 
     public function walletTransfer($payment)
     {
-        
+
     }
 }

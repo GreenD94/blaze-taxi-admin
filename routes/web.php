@@ -64,21 +64,23 @@ Route::group(['middleware' => ['auth', 'verified', 'admin']], function()
 	Route::resource('role', RoleController::class);
 	Route::resource('region', RegionController::class);
 	Route::resource('service', ServiceController::class);
-        
+
     Route::get('rider/{id}/wallet',[ WalletController::class,'index' ])->name('rider.wallet');
     Route::put('rider/{id}/wallet',[ WalletController::class,'saveWallet' ])->name('rider.wallet.save');
 
 	Route::resource('rider', RiderController::class);
 	Route::resource('driver', DriverController::class);
     Route::get('driver/list/{status?}', [ DriverController::class,'index' ])->name('driver.pending');
+    Route::get('driver/{id}/ride-history', [ DriverController::class, 'getRideHistory' ])->name('driver.ride-history');
+    Route::get('driver/{id}/ride-history/export', [ DriverController::class, 'exportRideHistoryCSV' ])->name('driver.ride-history.export');
 
 	Route::resource('fleet', FleetController::class);
 	Route::resource('additionalfees', AdditionalFeesController::class);
 	Route::resource('document', DocumentController::class);
 	Route::resource('driverdocument', DriverDocumentController::class);
-    
+
     Route::post('assign-driver', [ RideRequestController::class, 'assignDriverToRide' ] )->name('riderequest.assign-driver');
-    
+
     Route::resource('riderequest', RideRequestController::class)->except(['create', 'edit']);
     Route::resource('coupon', CouponController::class);
     Route::resource('complaint', ComplaintController::class);
@@ -97,7 +99,7 @@ Route::group(['middleware' => ['auth', 'verified', 'admin']], function()
     Route::post('ride-settings/save',[ SettingController::class , 'rideSettingsUpdate'])->name('rideSettingsUpdate');
     Route::post('notification-settings/save',[ SettingController::class , 'notificationSettingsUpdate'])->name('notificationSettingsUpdate');
     Route::post('referrals-settings/save',[ SettingController::class , 'referralSettingsUpdate'])->name('referralSettingsUpdate');
-    
+
     Route::post('get-lang-file', [ LanguageController::class, 'getFile' ] )->name('getLanguageFile');
     Route::post('save-lang-file', [ LanguageController::class, 'saveFileContent' ] )->name('saveLangContent');
 
@@ -106,7 +108,7 @@ Route::group(['middleware' => ['auth', 'verified', 'admin']], function()
 
     Route::get('pages/privacy-policy',[ SettingController::class, 'privacyPolicy'])->name('privacy-policy');
     Route::post('privacy-policy-save',[ SettingController::class, 'savePrivacyPolicy'])->name('privacy-policy-save');
-    
+
 	Route::post('env-setting', [ SettingController::class , 'envChanges'])->name('envSetting');
     Route::post('update-profile', [ SettingController::class , 'updateProfile'])->name('updateProfile');
     Route::post('change-password', [ SettingController::class , 'changePassword'])->name('changePassword');
@@ -126,9 +128,9 @@ Route::group(['middleware' => ['auth', 'verified', 'admin']], function()
     Route::get('map-view',[ HomeController::class, 'driverListMap' ])->name('driver_list.map');
     Route::get('driver-detail', [ HomeController::class, 'driverDetail' ] )->name('driverdetail');
 
-	Route::resource('bonus', BonusController::class); 
-       
-	Route::resource('banner', BannerController::class);    
+	Route::resource('bonus', BonusController::class);
+
+	Route::resource('banner', BannerController::class);
 
 });
 

@@ -11,10 +11,10 @@ use App\Models\Setting;
 use Illuminate\Support\Facades\DB;
 
 trait PaymentTrait {
-    
+
     public function walletTransaction($ride_request_id) {
         $ride_request = RideRequest::where('id', $ride_request_id)->first();
-        
+
         if( $ride_request == null ) {
             return false;
         }
@@ -26,7 +26,7 @@ trait PaymentTrait {
         $admin_commission = $ride_request->service->admin_commission ?? 0;
 
         $fleet_id = optional($ride_request->driver)->fleet_id;
-        
+
         $fleet_commission = 0;
         if( $fleet_id != null ) {
             $fleet_commission = $ride_request->service->fleet_commission ?? 0;
@@ -45,7 +45,7 @@ trait PaymentTrait {
                 $fleet_commission = $fleet_commission ? ( $ride_request_amount / 100) * $fleet_commission: 0;
             }
         }
-        
+
         if( $payment->payment_type == 'cash') {
             $payment->received_by = 'driver';
         } elseif ($payment->payment_type == 'wallet') {
@@ -61,7 +61,7 @@ trait PaymentTrait {
         $payment->driver_tips = $driver_tips;
         $payment->driver_commission = $driver_fee + $driver_tips + $ride_request->extra_charges_amount;
         $payment->save();
-        
+
         // $currency = optional($ride_request->service) && optional($ride_request->service)->region ? optional($ride_request->service)->region->currency_code : null;
 
         $currency_code = SettingData('CURRENCY', 'CURRENCY_CODE') ?? 'USD';
@@ -85,7 +85,7 @@ trait PaymentTrait {
                     'amount'            => $payment->driver_commission,
                     'balance'           => $driver_wallet->total_amount,
                     'ride_request_id'   => $payment->ride_request_id,
-                    'datetime'          => date('Y-m-d H:i:s'),
+                    'datetime'          => $ride_request->datetime,
                     'data' => [
                         'payment_id'    => $payment->id,
                         'tips'          => $payment->driver_tips
@@ -93,212 +93,71 @@ trait PaymentTrait {
                 ];
                 WalletHistory::create($driver_wallet_history);
 
-                $admin_wallet = Wallet::firstOrCreate(
-                    [ 'user_id' => $admin_id ]
-                );
-                
-                $admin_wallet->total_amount = $admin_wallet->total_amount + $admin_commission;
-                $admin_wallet->save();
-
-                $admin_wallet_history = [ 
-                    'user_id'           => $admin_id,
-                    'type'              => 'credit',
-                    'transaction_type'  => 'admin_commission',
-                    'currency'          => $currency,
-                    'amount'            => $admin_commission,
-                    'balance'           => $admin_wallet->total_amount,
-                    'ride_request_id'   => $payment->ride_request_id,
-                    'datetime'          => date('Y-m-d H:i:s'),
-                    'data' => [
-                        'payment_id'    => $payment->id
-                    ]
-                ];
-                WalletHistory::create($admin_wallet_history);
-
-                if( $fleet_id != null ) {
-                    $fleet_wallet = Wallet::firstOrCreate(
-                        [ 'user_id' => $fleet_id ]
-                    );
-                    $fleet_wallet->total_amount = $fleet_wallet->total_amount + $fleet_commission;
-                    $fleet_wallet->save();
-
-                    $fleet_wallet_history = [ 
-                        'user_id'           => $fleet_id,
-                        'type'              => 'credit',
-                        'transaction_type'  => 'fleet_commision',
-                        'currency'          => $currency,
-                        'amount'            => $fleet_commission,
-                        'balance'           => $fleet_wallet->total_amount,
-                        'ride_request_id'   => $payment->ride_request_id,
-                        'datetime'          => date('Y-m-d H:i:s'),
-                        'data' => [
-                            'payment_id' => $payment->id
-                        ]
-                    ];
-
-                    WalletHistory::create($fleet_wallet_history);
-                }
-            }elseif ($payment->payment_type == 'cash') {
-            /*
-                $driver_wallet = Wallet::firstOrCreate(
-                    [ 'user_id' => $ride_request->driver_id ]
-                );
-                $driver_wallet->collected_cash += $payment->total_amount;
-                $driver_wallet->total_amount = $payment->driver_fee + $payment->driver_tips;
-                $driver_wallet->save();
-
-                $driver_wallet_history = [
-                    'user_id'           => $ride_request->driver_id,
-                    'type'              => 'credit',
-                    'transaction_type'  => 'ride_fee',
-                    'currency'          => $currency,
-                    'amount'            => $payment->driver_fee,
-                    'balance'           => $driver_wallet->total_amount,
-                    'ride_request_id'   => $payment->ride_request_id,
-                    'data' => [
-                        'payment_id'    => $payment->id,
-                        'tips'          => $payment->driver_tips,                    
-                    ]
-                ];
-                WalletHistory::create($driver_wallet_history);
-            */
-
-                $admin_wallet = Wallet::firstOrCreate(
-                    [ 'user_id' => $admin_id ]
-                );
-                $admin_wallet->total_amount = $admin_wallet->total_amount + $admin_commission;
-                $admin_wallet->save();
-
-                $admin_wallet_history = [ 
-                    'user_id'           => $admin_id,
-                    'type'              => 'credit',
-                    'transaction_type'  => 'admin_commission',
-                    'currency'          => $currency,
-                    'amount'            => $admin_commission,
-                    'balance'           => $admin_wallet->total_amount,
-                    'ride_request_id'   => $payment->ride_request_id,
-                    'datetime'          => date('Y-m-d H:i:s'),
-                    'data' => [
-                        'payment_id'    => $payment->id
-                    ]
-                ];
-                WalletHistory::create($admin_wallet_history);
-
-                $driver_wallet = Wallet::firstOrCreate(
-                    [ 'user_id' => $ride_request->driver_id ]
-                );
                 $driver_wallet->total_amount -= $admin_commission;
                 $driver_wallet->save();
 
                 $driver_wallet_history = [
                     'user_id'           => $ride_request->driver_id,
                     'type'              => 'debit',
-                    'transaction_type'  => 'correction',
+                    'transaction_type'  => 'admin_commission',
                     'currency'          => $currency,
                     'amount'            => $admin_commission,
                     'balance'           => $driver_wallet->total_amount,
                     'ride_request_id'   => $payment->ride_request_id,
-                    'datetime'          => date('Y-m-d H:i:s'),
+                    'datetime'          => $ride_request->datetime,
+                    'data' => [
+                        'payment_id'    => $payment->id
+                    ]
                 ];
                 WalletHistory::create($driver_wallet_history);
-                
-                // refund cash difference
-                $difference = $ride_request->total_amount - $payment->total_amount;
 
-                if ($difference > 0) {
-
-                    $driver_wallet = Wallet::firstOrCreate(
-                        [ 'user_id' => $ride_request->driver_id ]
-                    );
-                    $driver_wallet->total_amount += $difference;
-                    $driver_wallet->save();
-    
-                    $driver_wallet_history = [
-                        'user_id'           => $ride_request->driver_id,
-                        'type'              => 'credit',
-                        'transaction_type'  => 'refund_cash_difference',
-                        'currency'          => $currency,
-                        'amount'            => $difference,
-                        'balance'           => $driver_wallet->total_amount,
-                        'ride_request_id'   => $payment->ride_request_id,
-                        'datetime'          => date('Y-m-d H:i:s'),
-                    ];
-                    WalletHistory::create($driver_wallet_history);
-
-                }
-
-                $collectedCash = $payment->collected_cash ?? 0;
-                $outstanding = $payment->total_amount;
-
-                $rider_wallet = Wallet::firstOrCreate(
-                    [ 'user_id' => $ride_request->rider_id ]
+                $admin_wallet = Wallet::firstOrCreate(
+                    [ 'user_id' => $admin_id ]
                 );
+                $admin_wallet->total_amount = $admin_wallet->total_amount + $admin_commission;
+                $admin_wallet->save();
 
-                $outstanding = max(0, $payment->total_amount - $rider_wallet->total_amount);
+                $admin_wallet_history = [
+                    'user_id'           => $admin_id,
+                    'type'              => 'credit',
+                    'transaction_type'  => 'admin_commission',
+                    'currency'          => $currency,
+                    'amount'            => $admin_commission,
+                    'balance'           => $admin_wallet->total_amount,
+                    'ride_request_id'   => $payment->ride_request_id,
+                    'datetime'          => $ride_request->datetime,
+                    'data' => [
+                        'payment_id'    => $payment->id
+                    ]
+                ];
+                WalletHistory::create($admin_wallet_history);
 
-                if ($rider_wallet->total_amount >= $ride_request->total_amount) {
-                    // El saldo es suficiente para cubrir el costo total
-                    singleWalletTransaction($ride_request->rider_id, $ride_request->total_amount, 'debit');
-                } else {
-                    // El saldo es insuficiente
-                    // Deducir el saldo disponible del cliente
-                    singleWalletTransaction($ride_request->rider_id, $rider_wallet->total_amount, 'debit');
-                }
-
-                if ($collectedCash > $outstanding) {
-
-                    $rider_wallet = Wallet::firstOrCreate(
-                        [ 'user_id' => $ride_request->rider_id ]
-                    );
-
-                    $rider_wallet->total_amount += $collectedCash - $outstanding;
-                    $rider_wallet->save();
-        
-                    $rider_wallet_history = [
-                        'user_id'           => $ride_request->rider_id,
-                        'type'              => 'credit',
-                        'transaction_type'  => 'cash_back',
-                        'currency'          => $currency,
-                        'amount'            => $collectedCash - $outstanding,
-                        'balance'           => $rider_wallet->total_amount,
-                        'ride_request_id'   => $payment->ride_request_id,
-                        'datetime'          => date('Y-m-d H:i:s'),
-                    ];
-
-                    WalletHistory::create($rider_wallet_history);
-
-                    // depositCashDifferenceToRiderWallet($ride_request);
-                    
-                    $driver_wallet = Wallet::firstOrCreate(
-                        [ 'user_id' => $ride_request->driver_id ]
-                    );
-
-                    $driver_wallet->total_amount -= $collectedCash - $payment->total_amount;
+                if( $fleet_id != null ) {
+                    $driver_wallet->total_amount -= $fleet_commission;
                     $driver_wallet->save();
-        
+
                     $driver_wallet_history = [
                         'user_id'           => $ride_request->driver_id,
                         'type'              => 'debit',
-                        'transaction_type'  => 'collected_cash_back',
+                        'transaction_type'  => 'fleet_commission',
                         'currency'          => $currency,
-                        'amount'            => $collectedCash - $payment->total_amount,
+                        'amount'            => $fleet_commission,
                         'balance'           => $driver_wallet->total_amount,
                         'ride_request_id'   => $payment->ride_request_id,
-                        'datetime'          => date('Y-m-d H:i:s'),
+                        'datetime'          => $ride_request->datetime,
+                        'data' => [
+                            'payment_id' => $payment->id
+                        ]
                     ];
-
                     WalletHistory::create($driver_wallet_history);
 
-                }
-
-                if( $fleet_id != null ) {
                     $fleet_wallet = Wallet::firstOrCreate(
                         [ 'user_id' => $fleet_id ]
                     );
                     $fleet_wallet->total_amount = $fleet_wallet->total_amount + $fleet_commission;
                     $fleet_wallet->save();
 
-                    $fleet_wallet_history = [ 
+                    $fleet_wallet_history = [
                         'user_id'           => $fleet_id,
                         'type'              => 'credit',
                         'transaction_type'  => 'fleet_commision',
@@ -306,32 +165,88 @@ trait PaymentTrait {
                         'amount'            => $fleet_commission,
                         'balance'           => $fleet_wallet->total_amount,
                         'ride_request_id'   => $payment->ride_request_id,
-                        'datetime'          => date('Y-m-d H:i:s'),
+                        'datetime'          => $ride_request->datetime,
                         'data' => [
                             'payment_id' => $payment->id
                         ]
                     ];
-                    WalletHistory::create($fleet_wallet_history);
 
-                
-                    $driver_wallet = Wallet::firstOrCreate(
-                        [ 'user_id' => $ride_request->driver_id ]
+                    WalletHistory::create($fleet_wallet_history);
+                }
+            }elseif ($payment->payment_type == 'cash' || $payment->payment_type == 'mobile' || $payment->payment_type == 'mobile-payment') {
+                // Para pagos en efectivo, móvil y mobile-payment, el conductor debe descontar el dinero de su wallet
+                $driver_wallet = Wallet::firstOrCreate(
+                    [ 'user_id' => $ride_request->driver_id ]
+                );
+                $driver_wallet->total_amount -= $payment->total_amount;
+                $driver_wallet->save();
+
+                $driver_wallet_history = [
+                    'user_id'           => $ride_request->driver_id,
+                    'type'              => 'debit',
+                    'transaction_type'  => 'ride_fee',
+                    'currency'          => $currency,
+                    'amount'            => $payment->total_amount,
+                    'balance'           => $driver_wallet->total_amount,
+                    'ride_request_id'   => $payment->ride_request_id,
+                    'datetime'          => $ride_request->datetime,
+                    'data' => [
+                        'payment_id'    => $payment->id,
+                        'tips'          => $payment->driver_tips
+                    ]
+                ];
+                WalletHistory::create($driver_wallet_history);
+
+                // Agregar la comisión del administrador a su wallet
+                $admin_wallet = Wallet::firstOrCreate(
+                    [ 'user_id' => $admin_id ]
+                );
+                $admin_wallet->total_amount = $admin_wallet->total_amount + $admin_commission;
+                $admin_wallet->save();
+
+                $admin_wallet_history = [
+                    'user_id'           => $admin_id,
+                    'type'              => 'credit',
+                    'transaction_type'  => 'admin_commission',
+                    'currency'          => $currency,
+                    'amount'            => $admin_commission,
+                    'balance'           => $admin_wallet->total_amount,
+                    'ride_request_id'   => $payment->ride_request_id,
+                    'datetime'          => $ride_request->datetime,
+                    'data' => [
+                        'payment_id'    => $payment->id
+                    ]
+                ];
+                WalletHistory::create($admin_wallet_history);
+
+                // Agregar la comisión de flota si existe
+                if( $fleet_id != null ) {
+                    $fleet_wallet = Wallet::firstOrCreate(
+                        [ 'user_id' => $fleet_id ]
                     );
-                    $driver_wallet->total_amount -= $fleet_commission;
-                    $driver_wallet->save();
-        
-                    $driver_wallet_history = [
-                        'user_id'           => $ride_request->driver_id,
-                        'type'              => 'debit',
-                        'transaction_type'  => 'correction',
+                    $fleet_wallet->total_amount = $fleet_wallet->total_amount + $fleet_commission;
+                    $fleet_wallet->save();
+
+                    $fleet_wallet_history = [
+                        'user_id'           => $fleet_id,
+                        'type'              => 'credit',
+                        'transaction_type'  => 'fleet_commision',
                         'currency'          => $currency,
                         'amount'            => $fleet_commission,
-                        'balance'           => $driver_wallet->total_amount,
+                        'balance'           => $fleet_wallet->total_amount,
                         'ride_request_id'   => $payment->ride_request_id,
-                        'datetime'          => date('Y-m-d H:i:s'),
+                        'datetime'          => $ride_request->datetime,
+                        'data' => [
+                            'payment_id' => $payment->id
+                        ]
                     ];
-                    WalletHistory::create($driver_wallet_history);
-                
+
+                    WalletHistory::create($fleet_wallet_history);
+                }
+
+                // Agregar el cambio a la billetera del cliente si es pago en efectivo
+                if ($payment->payment_type == 'cash' && $payment->total_amount && $payment->total_amount > $ride_request->total_amount) {
+                    $this->addChangeToRiderWallet($ride_request, $payment, $currency);
                 }
             }else {
                 $driver_wallet = Wallet::firstOrCreate(
@@ -348,10 +263,10 @@ trait PaymentTrait {
                     'amount'            => $payment->driver_commission,
                     'balance'           => $driver_wallet->total_amount,
                     'ride_request_id'   => $payment->ride_request_id,
-                    'datetime'          => date('Y-m-d H:i:s'),
+                    'datetime'          => $ride_request->datetime,
                     'data' => [
                         'payment_id'    => $payment->id,
-                        'tips'          => $payment->driver_tips,                    
+                        'tips'          => $payment->driver_tips,
                     ]
                 ];
                 WalletHistory::create($driver_wallet_history);
@@ -364,7 +279,7 @@ trait PaymentTrait {
                 $admin_wallet->total_amount += $admin_commission;
                 $admin_wallet->save();
 
-                $admin_wallet_history = [ 
+                $admin_wallet_history = [
                     'user_id'           => $admin_id,
                     'type'              => 'credit',
                     'transaction_type'  => 'admin_commission',
@@ -392,7 +307,7 @@ trait PaymentTrait {
                     'amount'            => $payment->driver_commission,
                     'balance'           => $admin_wallet->total_amount,
                     'ride_request_id'   => $payment->ride_request_id,
-                    'datetime'          => date('Y-m-d H:i:s'),
+                    'datetime'          => $ride_request->datetime,
                 ];
                 WalletHistory::create($admin_wallet_history);
 
@@ -403,7 +318,7 @@ trait PaymentTrait {
                     $fleet_wallet->total_amount = $fleet_wallet->total_amount + $fleet_commission;
                     $fleet_wallet->save();
 
-                    $fleet_wallet_history = [ 
+                    $fleet_wallet_history = [
                         'user_id'           => $fleet_id,
                         'type'              => 'credit',
                         'transaction_type'  => 'fleet_commision',
@@ -411,7 +326,7 @@ trait PaymentTrait {
                         'amount'            => $fleet_commission,
                         'balance'           => $fleet_wallet->total_amount,
                         'ride_request_id'   => $payment->ride_request_id,
-                        'datetime'          => date('Y-m-d H:i:s'),
+                        'datetime'          => $ride_request->datetime,
                         'data' => [
                             'payment_id' => $payment->id
                         ]
@@ -423,7 +338,7 @@ trait PaymentTrait {
                     );
                     $admin_wallet->total_amount -= $fleet_commission;
                     $admin_wallet->save();
-        
+
                     $admin_wallet_history = [
                         'user_id'           => $ride_request->driver_id,
                         'type'              => 'debit',
@@ -432,7 +347,7 @@ trait PaymentTrait {
                         'amount'            => $fleet_commission,
                         'balance'           => $admin_wallet->total_amount,
                         'ride_request_id'   => $payment->ride_request_id,
-                        'datetime'          => date('Y-m-d H:i:s'),
+                        'datetime'          => $ride_request->datetime,
                     ];
                     WalletHistory::create($admin_wallet_history);
                 }
@@ -443,7 +358,46 @@ trait PaymentTrait {
             DB::rollBack();
             return json_custom_response($e);
         }
-        
+
         return true;
+    }
+
+    /**
+     * Add change amount to rider's wallet when paying with cash
+     */
+    private function addChangeToRiderWallet($ride_request, $payment, $currency)
+    {
+        $change_amount = $payment->total_amount - $ride_request->total_amount;
+
+        if ($change_amount <= 0) {
+            return;
+        }
+
+        $rider_wallet = Wallet::firstOrCreate(
+            [ 'user_id' => $ride_request->rider_id ]
+        );
+
+        $rider_wallet->currency = $currency;
+        $rider_wallet->total_amount += $change_amount;
+        $rider_wallet->save();
+
+        $rider_wallet_history = [
+            'user_id'           => $ride_request->rider_id,
+            'type'              => 'credit',
+            'transaction_type'  => 'cash_change',
+            'currency'          => $currency,
+            'amount'            => $change_amount,
+            'balance'           => $rider_wallet->total_amount,
+            'ride_request_id'   => $payment->ride_request_id,
+            'datetime'          => $ride_request->datetime,
+            'data' => [
+                'payment_id'    => $payment->id,
+                'collected_cash' => $payment->collected_cash,
+                'ride_amount'   => $ride_request->total_amount,
+                'change_amount' => $change_amount
+            ]
+        ];
+
+        WalletHistory::create($rider_wallet_history);
     }
 }

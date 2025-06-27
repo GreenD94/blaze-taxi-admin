@@ -112,7 +112,8 @@ class RideHistoryService
         foreach ($rides as $ride) {
             $ride->historical_wallet_balance = $this->calculateHistoricalWalletBalance(
                 $driver->id,
-                $ride->datetime
+                $ride->datetime,
+                $ride->id
             );
         }
 
@@ -120,16 +121,33 @@ class RideHistoryService
     }
 
     /**
-     * Calculate historical wallet balance for a specific date
+     * Calculate historical wallet balance for a specific ride
      */
-    public function calculateHistoricalWalletBalance(int $userId, string $rideDateTime): float
+    public function calculateHistoricalWalletBalance(int $userId, string $rideDateTime, int $rideRequestId): float
     {
-        $latestTransaction = WalletHistory::where('user_id', $userId)
-            ->where('datetime', '<', $rideDateTime)
-            ->orderByDesc('datetime')
+        // Buscar la transacción de wallet_history que corresponda a este viaje específico
+        $walletTransaction = WalletHistory::where('user_id', $userId)
+            ->where('ride_request_id', $rideRequestId)
             ->first();
 
-        return $latestTransaction?->balance ?? 0.0;
+        // Si no hay transacción para este viaje, buscar la transacción más reciente antes del viaje
+        if (!$walletTransaction) {
+            $latestTransactionBeforeRide = WalletHistory::where('user_id', $userId)
+                ->where('datetime', '<', $rideDateTime)
+                ->orderByDesc('datetime')
+                ->first();
+
+            // Si no hay transacciones antes del viaje, el saldo histórico es 0
+            if (!$latestTransactionBeforeRide) {
+                return 0.0;
+            }
+
+            // El saldo histórico es el balance de la última transacción antes del viaje
+            return $latestTransactionBeforeRide->balance ?? 0.0;
+        }
+
+        // Si hay transacción para este viaje, el saldo histórico es el balance de esa transacción
+        return $walletTransaction->balance ?? 0.0;
     }
 
     /**

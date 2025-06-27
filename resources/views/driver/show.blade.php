@@ -296,7 +296,6 @@
                                 <th style="border: none; padding: 15px 8px; font-weight: 600; width: 150px; text-align: center;">{{ __('message.ride_history_table.rider') }}</th>
                                 <th style="border: none; padding: 15px 8px; font-weight: 600; width: 100px; text-align: center;">{{ __('message.ride_history_table.amount') }}</th>
                                 <th style="border: none; padding: 15px 8px; font-weight: 600; width: 120px; text-align: center;">{{ __('message.ride_history_table.method') }}</th>
-                                <th style="border: none; padding: 15px 8px; font-weight: 600; width: 120px; text-align: center;">{{ __('message.ride_history_table.collected_cash') }}</th>
                                 <th style="border: none; padding: 15px 8px; font-weight: 600; width: 120px; text-align: center;">{{ __('message.ride_history_table.total_amount') }}</th>
                                 <th style="border: none; padding: 15px 8px; font-weight: 600; width: 100px; text-align: center;">{{ __('message.ride_history_table.change') }}</th>
                                 <th style="border: none; padding: 15px 8px; font-weight: 600; width: 120px; text-align: center;">{{ __('message.ride_history_table.wallet_balance') }}</th>
@@ -416,7 +415,7 @@ const RideHistoryApp = {
     showLoading() {
         $('#rideHistoryModal tbody').html(`
             <tr>
-                <td colspan="11" class="text-center">
+                <td colspan="10" class="text-center">
                     <i class="fas fa-spinner fa-spin"></i> Cargando historial de viajes...
                 </td>
             </tr>
@@ -427,7 +426,7 @@ const RideHistoryApp = {
     showError(message) {
         $('#rideHistoryModal tbody').html(`
             <tr>
-                <td colspan="11" class="text-center text-danger">
+                <td colspan="10" class="text-center text-danger">
                     <i class="fas fa-exclamation-triangle"></i> ${message}
                 </td>
             </tr>
@@ -439,7 +438,7 @@ const RideHistoryApp = {
         if (!data || data.length === 0) {
             $('#rideHistoryModal tbody').html(`
                 <tr>
-                    <td colspan="11" class="text-center text-muted">
+                    <td colspan="10" class="text-center text-muted">
                         <i class="fas fa-info-circle"></i> No se encontraron registros
                     </td>
                 </tr>
@@ -477,7 +476,6 @@ const RideHistoryApp = {
                         ${paymentTypeLabel}
                     </span>
                 </td>
-                <td class="text-center">${ride.payment.formatted_collected_cash || '-'}</td>
                 <td class="text-center">${ride.payment.formatted_total_amount || '-'}</td>
                 <td class="text-center">${ride.payment.formatted_change || '-'}</td>
                 <td class="text-center">${ride.formatted_historical_wallet_balance || '-'}</td>

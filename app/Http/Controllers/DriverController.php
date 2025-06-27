@@ -232,7 +232,7 @@ class DriverController extends Controller
 
             $response = [
                 'status' => true,
-                'data' => RideHistoryResource::collection($completedRides->items()),
+                'data' => RideHistoryResource::collection($completedRides),
                 'pagination' => [
                     'current_page' => $completedRides->currentPage(),
                     'last_page' => $completedRides->lastPage(),
@@ -247,13 +247,6 @@ class DriverController extends Controller
                     'payment_type' => $validated['payment_type'] ?? null,
                 ]
             ];
-
-            Log::info('Response data structure:', [
-                'status' => $response['status'],
-                'count' => count($response['data']),
-                'total' => $response['pagination']['total'],
-                'current_page' => $response['pagination']['current_page']
-            ]);
 
             return response()->json($response);
         } catch (\Exception $e) {
@@ -304,7 +297,6 @@ class DriverController extends Controller
                     'Teléfono Pasajero',
                     'Monto',
                     'Método de Pago',
-                    'Efectivo Recibido',
                     'Efectivo Cobrado',
                     'Vuelto',
                     'Saldo Billetera',
@@ -318,7 +310,6 @@ class DriverController extends Controller
 
                     $paymentTypeText = $this->rideHistoryService->formatPaymentTypeForCsv($ride->payment_type);
 
-                    $collectedCash = $ride->payment?->collected_cash ? number_format($ride->payment->collected_cash, 2) : '-';
                     $totalAmount = $ride->payment?->total_amount ? number_format($ride->payment->total_amount, 2) : '-';
 
                     $change = '-';
@@ -335,7 +326,6 @@ class DriverController extends Controller
                         $riderPhone,
                         number_format($ride->total_amount, 2),
                         $paymentTypeText,
-                        $collectedCash,
                         $totalAmount,
                         $change,
                         $walletBalance,

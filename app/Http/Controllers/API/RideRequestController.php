@@ -277,8 +277,7 @@ class RideRequestController extends Controller
         $base_fare = $service->base_fare;
         $acceptedFee =  $ride_request->modality == 'auction' ?
             ($ride_request->offerings->where('driver_id', $ride_request->driver_id)->last()->fee_offered ?? 0) : $ride_request->proposed_fee;
-        // $total_amount =         $acceptedFee + $base_fare + $per_distance_charge + $per_minute_drive_charge + $per_minute_waiting_charge +  $extra_charges_amount ;
-        $total_amount = $acceptedFee + $extra_charges_amount ;
+        $total_amount = $acceptedFee + $base_fare + $per_distance_charge + $per_minute_drive_charge + $per_minute_waiting_charge + $extra_charges_amount;
 
         if( $service->commission_type == 'fixed' ) {
             $commission = $service->admin_commission + $service->fleet_commission;

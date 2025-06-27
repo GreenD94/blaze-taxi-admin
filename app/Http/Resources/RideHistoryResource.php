@@ -52,11 +52,11 @@ class RideHistoryResource extends JsonResource
      */
     private function calculateChange()
     {
-        if (!$this->payment || !$this->payment->collected_cash || !$this->payment->total_amount) {
+        if (!$this->payment || !$this->payment->total_amount || !$this->total_amount) {
             return null;
         }
 
-        return $this->payment->collected_cash - $this->payment->total_amount;
+        return $this->payment->total_amount - $this->total_amount;
     }
 
     /**

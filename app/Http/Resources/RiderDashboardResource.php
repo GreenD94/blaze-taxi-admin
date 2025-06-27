@@ -26,20 +26,25 @@ class RiderDashboardResource extends JsonResource
                         //     $q->where('payment_status', 'pending');
                         // })
                         ->first();
-         
+
         $pending_payment_ride_request = $this->riderRideRequestDetail()->where('status', 'completed')
                         ->whereHas('payment',function ($q) {
                             $q->where('payment_status', 'pending');
                         })
                         ->orderByDesc('id')
                         ->first();
-         
+
         $driver = isset($on_ride_request) && optional($on_ride_request->driver) ? $on_ride_request->driver : null;
         $payment = isset($pending_payment_ride_request) && optional($pending_payment_ride_request->payment) ? $pending_payment_ride_request->payment : null;
-        
+
         //$is_rider_rated = isset($on_ride_request) && $on_ride_request->rideRequestRating()->where('driver_id', $on_ride_request->driver_id)->first();
 
-        $is_completed = $on_ride_request->status == 'completed' && $on_ride_request->payment != null && $on_ride_request->payment->payment_status == 'paid';
+        $is_completed = false;
+        if (isset($on_ride_request) && $on_ride_request !== null) {
+            $is_completed = $on_ride_request->status == 'completed' &&
+                           $on_ride_request->payment != null &&
+                           $on_ride_request->payment->payment_status == 'paid';
+        }
 
         return [
             'id'                => $this->id,

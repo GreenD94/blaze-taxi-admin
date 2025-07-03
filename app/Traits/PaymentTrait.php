@@ -245,7 +245,7 @@ trait PaymentTrait {
                 }
 
                 // Agregar el cambio a la billetera del cliente si es pago en efectivo
-                if ($payment->payment_type == 'cash' && $payment->collected_cash && $payment->collected_cash > $ride_request->total_amount) {
+                if ($payment->payment_type == 'cash' && $payment->total_amount && $payment->total_amount > $ride_request->total_amount) {
                     $this->addChangeToRiderWallet($ride_request, $payment, $currency);
                 }
             }else {
@@ -367,7 +367,7 @@ trait PaymentTrait {
      */
     private function addChangeToRiderWallet($ride_request, $payment, $currency)
     {
-        $change_amount = $payment->collected_cash - $ride_request->total_amount;
+        $change_amount = $payment->total_amount - $ride_request->total_amount;
 
         if ($change_amount <= 0) {
             return;

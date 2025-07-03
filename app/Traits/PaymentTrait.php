@@ -390,12 +390,12 @@ trait PaymentTrait {
             'balance'           => $rider_wallet->total_amount,
             'ride_request_id'   => $payment->ride_request_id,
             'datetime'          => $ride_request->datetime,
-            'data' => [
+            /*'data' => [
                 'payment_id'    => $payment->id,
                 'collected_cash' => $payment->collected_cash,
                 'ride_amount'   => $ride_request->total_amount,
                 'change_amount' => $change_amount
-            ]
+            ]*/
         ];
 
         WalletHistory::create($rider_wallet_history);
